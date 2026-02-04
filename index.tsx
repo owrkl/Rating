@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { 
@@ -12,7 +11,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-// --- Constants ---
+// --- Constants & Types ---
 const BUCKET_ID = 'qaisariya_ranking_v6_final';
 const API_URL = `https://kvdb.io/${BUCKET_ID}/members_data`;
 
@@ -70,7 +69,6 @@ const Avatar = ({ className = "w-12 h-12" }: { className?: string }) => (
   </div>
 );
 
-// Added explicit typing to include 'key' in acceptable props during JSX rendering in maps
 const MemberCard: React.FC<{ member: any; rank?: any; isCompact?: boolean }> = ({ member, rank, isCompact = false }) => (
   <div className={`flex items-center gap-4 bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 p-4 rounded-xl mb-3 shadow-lg transition-all hover:bg-slate-800 hover:border-indigo-500/30`}>
     {rank && (
@@ -92,7 +90,6 @@ const MemberCard: React.FC<{ member: any; rank?: any; isCompact?: boolean }> = (
   </div>
 );
 
-// Added explicit typing to include 'key' in acceptable props during JSX rendering in maps
 const SortableItem: React.FC<{ id: any; member: any; index: any }> = ({ id, member, index }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 50 : 'auto', opacity: isDragging ? 0.8 : 1 };

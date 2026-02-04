@@ -5,11 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>تقييم أعضاء القيصرية العمرية</title>
     
-    <!-- Base tag is crucial for GitHub Pages subdirectories -->
+    <!-- Base tag helps resolve relative paths on GitHub Pages -->
     <base href="/Rating/">
     
-    <!-- Scripts for Browser-side Transpilation -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Babel for browser-side transpilation -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -24,19 +26,34 @@
         margin: 0;
         padding: 0;
       }
+      /* Loading State Styles */
       #root:empty {
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
         height: 100vh;
-        font-weight: bold;
         color: #6366f1;
+      }
+      #root:empty::before {
+        content: "";
+        width: 40px;
+        height: 40px;
+        border: 4px solid #1e293b;
+        border-top-color: #6366f1;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 16px;
       }
       #root:empty::after {
         content: "جاري تحميل المنصة...";
-        animation: pulse-soft 2s infinite;
+        font-weight: bold;
+        font-size: 1.1rem;
+        opacity: 0.8;
       }
-      @keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      @keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+      .animate-pulse-soft { animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
     </style>
 
     <script type="importmap">
@@ -58,8 +75,12 @@
   <body>
     <div id="root"></div>
 
-    <!-- Babel fetches this file as text, bypassing MIME checks -->
-    <script type="text/babel" data-presets="react,typescript" src="index.tsx"></script>
+    <!-- 
+      CRITICAL FIX: 
+      data-type="module" is required for Babel to allow top-level imports.
+      data-presets="react,typescript" tells Babel how to parse the code.
+    -->
+    <script type="text/babel" data-type="module" data-presets="react,typescript" src="index.tsx"></script>
   <script type="module" src="/index.tsx"></script>
 </body>
 </html>
