@@ -2,7 +2,7 @@ import React from 'react';
 import { Member } from '../types';
 import { Avatar } from '../components/Avatar';
 import { MemberCard } from '../components/MemberCard';
-import { Crown, Star } from 'lucide-react';
+import { Crown, Star, Globe } from 'lucide-react';
 
 interface LeaderboardProps {
   members: Member[];
@@ -19,22 +19,28 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ members, onStartVoting
   const podiumOrder = [topThree[1], topThree[0], topThree[2]];
 
   return (
-    <div className="min-h-screen pb-24 relative">
+    <div className="min-h-screen pb-24 relative overflow-x-hidden">
       {/* Header */}
-      <div className="text-center py-8 px-4 bg-gradient-to-b from-indigo-900/40 to-transparent">
+      <div className="text-center py-8 px-4 bg-gradient-to-b from-indigo-900/40 to-transparent relative">
+        <div className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 text-[10px] md:text-xs font-bold animate-pulse-soft">
+          <Globe className="w-3 h-3" />
+          <span>مباشر (عام)</span>
+        </div>
+        
         <h1 className="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-200 mb-2 drop-shadow-sm">
           أعضاء القيصرية العمرية
         </h1>
         <p className="text-slate-400 text-sm md:text-base">
-          الترتيب الحالي بناءً على تصويت المجتمع
+          الترتيب العالمي بناءً على جميع المشاركات
         </p>
       </div>
 
       {/* Podium Section */}
       <div className="flex justify-center items-end gap-2 md:gap-6 px-4 mb-10 max-w-3xl mx-auto">
         {podiumOrder.map((member, index) => {
-          // Determine podium styles based on visual position (not array index)
-          const isFirst = index === 1; // Middle element in [2, 1, 3] layout
+          if (!member) return <div key={index} className="w-1/3" />;
+          
+          const isFirst = index === 1; // Middle element
           const isSecond = index === 0;
           const isThird = index === 2;
           
@@ -60,16 +66,17 @@ export const Leaderboard: React.FC<LeaderboardProps> = ({ members, onStartVoting
             borderClass = 'border-amber-600';
           }
 
-          if (!member) return null;
-
           return (
             <div key={member.id} className="flex flex-col items-center w-1/3 max-w-[140px]">
+              {/* Crown and Avatar Wrapper */}
               <div className="relative mb-2 w-fit mx-auto">
-                <Avatar className={`w-16 h-16 md:w-24 md:h-24 border-4 ${borderClass} shadow-xl`} />
-                <div className={`absolute -top-3 -right-3 w-8 h-8 rounded-full flex items-center justify-center font-bold border-2 ${borderClass} bg-slate-900 text-white`}>
+                 {isFirst && (
+                  <Crown className="absolute -top-10 left-1/2 -translate-x-1/2 w-10 h-10 text-yellow-400 animate-bounce z-10" />
+                )}
+                <Avatar className={`w-16 h-16 md:w-24 md:h-24 border-4 ${borderClass} shadow-xl relative z-0`} />
+                <div className={`absolute -top-3 -right-3 w-8 h-8 rounded-full flex items-center justify-center font-bold border-2 ${borderClass} bg-slate-900 text-white z-20`}>
                   {rank}
                 </div>
-                {isFirst && <Crown className="absolute -top-10 left-1/2 -translate-x-1/2 w-10 h-10 text-yellow-400 animate-bounce" />}
               </div>
               
               <div className={`w-full rounded-t-lg bg-gradient-to-t ${colorClass} backdrop-blur-md border-x border-t ${borderClass.replace('border-', 'border-opacity-30 ')} flex flex-col justify-end items-center p-2 text-center ${heightClass}`}>

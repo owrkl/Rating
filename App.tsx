@@ -23,12 +23,20 @@ const App: React.FC = () => {
 
   useEffect(() => {
     refreshMembers();
+    
+    // Auto-refresh every 30 seconds to sync with other voters
+    const interval = setInterval(refreshMembers, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleSubmitVote = async (rankedMembers: Member[]) => {
-    await db.submitVote(rankedMembers);
-    await refreshMembers();
-    setView('SUCCESS');
+    const success = await db.submitVote(rankedMembers);
+    if (success) {
+      await refreshMembers();
+      setView('SUCCESS');
+    } else {
+      alert("حدث خطأ أثناء إرسال التقييم. يرجى المحاولة مرة أخرى.");
+    }
   };
 
   if (isLoading) {
@@ -45,16 +53,16 @@ const App: React.FC = () => {
         <div className="w-24 h-24 bg-emerald-500/20 rounded-full flex items-center justify-center mb-6 animate-pulse">
             <Check className="w-12 h-12 text-emerald-400" />
         </div>
-        <h2 className="text-3xl font-bold text-white mb-2">تم استلام تقييمك!</h2>
+        <h2 className="text-3xl font-bold text-white mb-2">تم استلام تقييمك بنجاح!</h2>
         <p className="text-slate-400 mb-8 max-w-xs">
-          شكراً لمشاركتك في تقييم أعضاء القيصرية العمرية.
+          تمت إضافة تقييمك إلى النتائج العالمية للقيصرية العمرية.
         </p>
         <button
           onClick={() => setView('LEADERBOARD')}
           className="flex items-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition-colors"
         >
           <RotateCcw className="w-5 h-5" />
-          <span>العودة للرئيسية</span>
+          <span>العودة للترتيب العالمي</span>
         </button>
       </div>
     );
@@ -70,7 +78,6 @@ const App: React.FC = () => {
     );
   }
 
-  // Default: Leaderboard
   return (
     <Leaderboard
       members={members}

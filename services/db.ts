@@ -1,112 +1,84 @@
 import { INITIAL_MEMBERS } from '../constants';
 import { Member } from '../types';
 
-let db: any = null;
-let SQL: any = null;
+// Using a public key-value store for global synchronization
+// Bucket ID is specific to this project
+const BUCKET_ID = 'qaisariya_ranking_global_v1';
+const API_URL = `https://kvdb.io/${BUCKET_ID}/members_data`;
 
-// Initialize the database
-export const getDb = async () => {
-  if (db) return db;
-  
-  // Initialize SQL.js from window global (loaded via script tag)
-  if (!SQL) {
-    if (!(window as any).initSqlJs) {
-      throw new Error("SQL.js not loaded");
-    }
-    SQL = await (window as any).initSqlJs({
-      locateFile: (file: string) => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
-    });
-  }
-
-  // Try to load from local storage
-  // V2 to force re-seed with new ranking order
-  const savedData = localStorage.getItem('members_db_sqlite_v2');
-  
-  if (savedData) {
-    try {
-      const binaryString = atob(savedData);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      db = new SQL.Database(bytes);
-    } catch (e) {
-      console.error("Failed to load DB from storage, resetting", e);
-      db = new SQL.Database();
-      initSchema();
-    }
-  } else {
-    db = new SQL.Database();
-    initSchema();
-  }
-  
-  return db;
-};
-
-// Initialize schema and seed data
-const initSchema = () => {
-  db.run("CREATE TABLE IF NOT EXISTS members (id TEXT PRIMARY KEY, name TEXT, title TEXT, score INTEGER)");
-  
-  // Check if empty
-  const res = db.exec("SELECT count(*) FROM members");
-  if (res[0].values[0][0] === 0) {
-      const stmt = db.prepare("INSERT INTO members VALUES (?, ?, ?, ?)");
-      INITIAL_MEMBERS.forEach(m => {
-        stmt.run([m.id, m.name, m.title, m.score]);
-      });
-      stmt.free();
-  }
-  saveToStorage();
-};
-
-// Persist to local storage
-const saveToStorage = () => {
-  const data = db.export();
-  let binary = '';
-  const len = data.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(data[i]);
-  }
-  localStorage.setItem('members_db_sqlite_v2', btoa(binary));
-};
-
-// Fetch all members
+/**
+ * Fetches the current global member data.
+ * If the remote store is empty, it returns the initial default members.
+ */
 export const getMembers = async (): Promise<Member[]> => {
-  const db = await getDb();
   try {
-      const res = db.exec("SELECT * FROM members");
-      if (res.length === 0) return [];
-      
-      const values = res[0].values;
-      
-      return values.map((v: any[]) => ({
-        id: v[0],
-        name: v[1],
-        title: v[2],
-        score: v[3]
-      }));
-  } catch (e) {
-      console.error("Error fetching members", e);
-      return INITIAL_MEMBERS;
+    const response = await fetch(API_URL);
+    if (!response.ok) {
+      if (response.status === 404) {
+        // First time initialization
+        await saveMembers(INITIAL_MEMBERS);
+        return INITIAL_MEMBERS;
+      }
+      throw new Error('Failed to fetch global data');
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Global fetch error, falling back to local defaults:", error);
+    return INITIAL_MEMBERS;
   }
 };
 
-// Update scores based on ranking
-export const submitVote = async (rankedMembers: Member[]) => {
-  const db = await getDb();
-  
-  // Calculate points and update
-  // Logic: Rank 1 (+50), Rank 2 (+40), etc.
-  rankedMembers.forEach((member, index) => {
-    const points = (5 - index) * 10;
-    db.run("UPDATE members SET score = score + ? WHERE id = ?", [points, member.id]);
-  });
-  
-  saveToStorage();
+/**
+ * Saves the member data to the global store.
+ */
+const saveMembers = async (members: Member[]) => {
+  try {
+    await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify(members),
+    });
+  } catch (error) {
+    console.error("Failed to save to global store:", error);
+  }
 };
 
-// Reset for testing
-export const resetDb = () => {
-    localStorage.removeItem('members_db_sqlite_v2');
-    location.reload();
+/**
+ * Submits a vote by updating the global totals.
+ * To prevent race conditions, it fetches the LATEST data right before updating.
+ */
+export const submitVote = async (rankedMembers: Member[]) => {
+  try {
+    // 1. Get current global state to ensure we are adding to the latest scores
+    const currentGlobalMembers = await getMembers();
+    
+    // 2. Create a map for easy lookup
+    const memberMap = new Map(currentGlobalMembers.map(m => [m.id, m]));
+
+    // 3. Add points based on ranking (Rank 1: 50, Rank 2: 40, etc.)
+    rankedMembers.forEach((rankedMember, index) => {
+      const existing = memberMap.get(rankedMember.id);
+      if (existing) {
+        const points = (5 - index) * 10;
+        existing.score += points;
+      }
+    });
+
+    // 4. Save back to the global store
+    const updatedList = Array.from(memberMap.values());
+    await saveMembers(updatedList);
+    
+    return true;
+  } catch (error) {
+    console.error("Voting submission failed:", error);
+    return false;
+  }
+};
+
+/**
+ * Resets the global data (Admin/Testing use only)
+ */
+export const resetDb = async () => {
+  await saveMembers(INITIAL_MEMBERS);
+  location.reload();
 };
