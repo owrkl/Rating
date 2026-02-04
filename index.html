@@ -74,6 +74,7 @@
                 radial-gradient(circle at 100% 0%, #312e81 0%, transparent 30%);
             color: #f8fafc;
             min-height: 100vh;
+            touch-action: manipulation; /* Improve touch response globally */
         }
         
         /* Custom Scrollbar */
@@ -118,7 +119,7 @@
             Crown, Star, GripVertical, CheckCircle2, ArrowRight, Trophy, Sparkles, Activity, RotateCcw
         } from 'lucide-react';
         import {
-            DndContext, closestCenter, KeyboardSensor, MouseSensor, TouchSensor, useSensor, useSensors
+            DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors
         } from '@dnd-kit/core';
         import {
             arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable
@@ -240,7 +241,7 @@
                 transition,
                 zIndex: isDragging ? 50 : 'auto',
                 position: 'relative',
-                touchAction: 'none' // Important for touch events on the handle
+                // removed touchAction: 'none' from container to allow scrolling on the body of the card
             };
 
             const rankColor = index === 0 ? 'bg-yellow-500 text-black' : index === 1 ? 'bg-slate-300 text-black' : index === 2 ? 'bg-amber-700 text-white' : 'bg-slate-700 text-slate-300';
@@ -262,11 +263,12 @@
                         <div className="text-xs text-slate-400">{member.title}</div>
                     </div>
                     
-                    {/* Explicit Drag Handle */}
+                    {/* Explicit Drag Handle with strict touch-action: none */}
                     <div 
                         {...attributes} 
                         {...listeners} 
-                        className="p-4 -m-4 cursor-grab active:cursor-grabbing text-slate-500 hover:text-white flex items-center justify-center touch-none"
+                        style={{ touchAction: 'none' }}
+                        className="p-4 -m-4 cursor-grab active:cursor-grabbing text-slate-500 hover:text-white flex items-center justify-center"
                     >
                         <GripVertical className="w-8 h-8" />
                     </div>
@@ -329,22 +331,13 @@
             const [items, setItems] = useState(members);
             const [submitting, setSubmitting] = useState(false);
             
-            // Replaced sensors with explicit Mouse and Touch sensors
-            // Mouse: Requires 10px movement to start drag
-            // Touch: Requires 250ms delay (Long Press) OR use the handle
-            // Since we use a handle, we will set it to instant for simplicity but keep constraints to avoid accidents
+            // PointerSensor handles both Mouse and Touch. 
+            // We removed the delay logic to make it snappy, and added 'touch-action: none' to the handle.
+            // distance: 8 prevents accidental drags when just clicking/tapping lightly.
             const sensors = useSensors(
-                useSensor(MouseSensor, {
+                useSensor(PointerSensor, {
                     activationConstraint: {
-                        distance: 5,
-                    },
-                }),
-                useSensor(TouchSensor, {
-                    // Slight delay to distinguish tap vs drag on touch devices, 
-                    // helps with scrolling unless we use a handle with touch-action: none (which we do)
-                    activationConstraint: {
-                        delay: 50,
-                        tolerance: 5,
+                        distance: 8,
                     },
                 }),
                 useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
