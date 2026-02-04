@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>تقييم أعضاء القيصرية العمرية</title>
     
     <!-- Fonts -->
@@ -47,21 +47,21 @@
         }
     </script>
 
-    <!-- CRITICAL FIX: Import Map with ?external=react -->
+    <!-- CRITICAL FIX: Fixed React version mismatch. Removed conflicting react/ v19 entry. -->
     <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@18.2.0",
-    "react-dom": "https://esm.sh/react-dom@18.2.0",
-    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-    "lucide-react": "https://esm.sh/lucide-react@0.294.0?external=react",
-    "@dnd-kit/core": "https://esm.sh/@dnd-kit/core@6.0.8?external=react,react-dom",
-    "@dnd-kit/sortable": "https://esm.sh/@dnd-kit/sortable@7.0.2?external=react,react-dom",
-    "@dnd-kit/utilities": "https://esm.sh/@dnd-kit/utilities@3.2.1?external=react,react-dom",
-    "react/": "https://esm.sh/react@^19.2.4/"
-  }
-}
-</script>
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react/": "https://esm.sh/react@18.2.0/",
+            "react-dom": "https://esm.sh/react-dom@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "lucide-react": "https://esm.sh/lucide-react@0.294.0?external=react",
+            "@dnd-kit/core": "https://esm.sh/@dnd-kit/core@6.0.8?external=react,react-dom",
+            "@dnd-kit/sortable": "https://esm.sh/@dnd-kit/sortable@7.0.2?external=react,react-dom",
+            "@dnd-kit/utilities": "https://esm.sh/@dnd-kit/utilities@3.2.1?external=react,react-dom"
+        }
+    }
+    </script>
 
     <!-- Babel -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -74,7 +74,8 @@
                 radial-gradient(circle at 100% 0%, #312e81 0%, transparent 30%);
             color: #f8fafc;
             min-height: 100vh;
-            touch-action: manipulation; /* Improve touch response globally */
+            touch-action: manipulation;
+            overscroll-behavior: none;
         }
         
         /* Custom Scrollbar */
@@ -97,14 +98,9 @@
             animation: shine 4s linear infinite;
         }
         
-        /* Prevent selection during drag */
-        .no-select {
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            -khtml-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-            user-select: none;
+        /* Critical for drag performance */
+        .touch-none {
+            touch-action: none !important;
         }
     </style>
 <link rel="stylesheet" href="/index.css">
@@ -119,7 +115,7 @@
             Crown, Star, GripVertical, CheckCircle2, ArrowRight, Trophy, Sparkles, Activity, RotateCcw
         } from 'lucide-react';
         import {
-            DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors
+            DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, TouchSensor, MouseSensor
         } from '@dnd-kit/core';
         import {
             arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable
@@ -173,13 +169,6 @@
         };
 
         // --- Components ---
-
-        const Avatar = ({ rank, className = "" }) => (
-            <div className={`relative flex items-center justify-center rounded-full bg-slate-800 border-2 ${className} overflow-hidden`}>
-                <div className="absolute inset-0 bg-gradient-to-tr from-slate-700 to-slate-600 opacity-50"></div>
-                <span className="relative z-10 text-slate-400 font-bold text-xs">IMG</span>
-            </div>
-        );
 
         const RankBadge = ({ rank }) => {
             if (rank === 1) return <div className="absolute -top-3 w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center border-2 border-slate-900 shadow-lg z-20 text-slate-900 font-black">1</div>;
@@ -241,7 +230,6 @@
                 transition,
                 zIndex: isDragging ? 50 : 'auto',
                 position: 'relative',
-                // removed touchAction: 'none' from container to allow scrolling on the body of the card
             };
 
             const rankColor = index === 0 ? 'bg-yellow-500 text-black' : index === 1 ? 'bg-slate-300 text-black' : index === 2 ? 'bg-amber-700 text-white' : 'bg-slate-700 text-slate-300';
@@ -251,8 +239,8 @@
                     ref={setNodeRef} 
                     style={style} 
                     className={`
-                    flex items-center gap-4 p-4 mb-3 rounded-xl border transition-all no-select
-                    ${isDragging ? 'bg-indigo-600 border-indigo-400 shadow-2xl scale-105' : 'glass-panel border-slate-700/50 hover:border-slate-600'}
+                    flex items-center gap-4 p-4 mb-3 rounded-xl border transition-all
+                    ${isDragging ? 'bg-indigo-600 border-indigo-400 shadow-2xl scale-105 z-50' : 'glass-panel border-slate-700/50 hover:border-slate-600'}
                 `}>
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-lg ${rankColor}`}>
                         {index + 1}
@@ -263,12 +251,14 @@
                         <div className="text-xs text-slate-400">{member.title}</div>
                     </div>
                     
-                    {/* Explicit Drag Handle with strict touch-action: none */}
+                    {/* 
+                        TOUCH ACTION NONE IS CRITICAL HERE 
+                        We attach listeners specifically to this handle
+                    */}
                     <div 
                         {...attributes} 
                         {...listeners} 
-                        style={{ touchAction: 'none' }}
-                        className="p-4 -m-4 cursor-grab active:cursor-grabbing text-slate-500 hover:text-white flex items-center justify-center"
+                        className="p-4 -m-4 cursor-grab active:cursor-grabbing text-slate-500 hover:text-white flex items-center justify-center touch-none"
                     >
                         <GripVertical className="w-8 h-8" />
                     </div>
@@ -331,13 +321,13 @@
             const [items, setItems] = useState(members);
             const [submitting, setSubmitting] = useState(false);
             
-            // PointerSensor handles both Mouse and Touch. 
-            // We removed the delay logic to make it snappy, and added 'touch-action: none' to the handle.
-            // distance: 8 prevents accidental drags when just clicking/tapping lightly.
+            // CRITICAL SENSOR FIX
+            // Using PointerSensor with minimum distance prevents accidental clicks but allows smooth drag.
+            // touch-action: none on the handle (via class 'touch-none') ensures the browser doesn't steal the event.
             const sensors = useSensors(
                 useSensor(PointerSensor, {
                     activationConstraint: {
-                        distance: 8,
+                        distance: 5, // 5px movement required to start drag
                     },
                 }),
                 useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
