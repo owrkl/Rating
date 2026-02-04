@@ -2,7 +2,7 @@ import { INITIAL_MEMBERS } from '../constants.ts';
 import { Member } from '../types.ts';
 
 // Unique bucket ID for the Qaisariya group ranking
-const BUCKET_ID = 'qaisariya_ranking_global_v5';
+const BUCKET_ID = '2qK2ZoYWGQKQGQst3SJ5f';
 const API_URL = `https://kvdb.io/${BUCKET_ID}/members_data`;
 
 /**
