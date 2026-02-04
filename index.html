@@ -47,16 +47,17 @@
         }
     </script>
 
-    <!-- Import Map -->
+    <!-- CRITICAL FIX: Import Map with ?external=react -->
     <script type="importmap">
 {
   "imports": {
     "react": "https://esm.sh/react@18.2.0",
+    "react-dom": "https://esm.sh/react-dom@18.2.0",
     "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-    "lucide-react": "https://esm.sh/lucide-react@0.294.0",
-    "@dnd-kit/core": "https://esm.sh/@dnd-kit/core@6.0.8",
-    "@dnd-kit/sortable": "https://esm.sh/@dnd-kit/sortable@7.0.2",
-    "@dnd-kit/utilities": "https://esm.sh/@dnd-kit/utilities@3.2.1",
+    "lucide-react": "https://esm.sh/lucide-react@0.294.0?external=react",
+    "@dnd-kit/core": "https://esm.sh/@dnd-kit/core@6.0.8?external=react,react-dom",
+    "@dnd-kit/sortable": "https://esm.sh/@dnd-kit/sortable@7.0.2?external=react,react-dom",
+    "@dnd-kit/utilities": "https://esm.sh/@dnd-kit/utilities@3.2.1?external=react,react-dom",
     "react/": "https://esm.sh/react@^19.2.4/"
   }
 }
@@ -115,8 +116,8 @@
         import { CSS } from '@dnd-kit/utilities';
 
         // --- Data & Configuration ---
-        // Updated Bucket ID to force reset with 0 scores
-        const BUCKET_ID = 'qaisariya_ranking_v8_zeroed';
+        // NEW BUCKET ID to ensure Fresh Zero Start
+        const BUCKET_ID = 'qaisariya_ranking_v9_zeroed';
         const API_URL = `https://kvdb.io/${BUCKET_ID}/members`;
 
         const INITIAL_MEMBERS = [
