@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ViewState, Member } from './types';
-import { Leaderboard } from './views/Leaderboard';
-import { Voting } from './views/Voting';
+import { ViewState, Member } from './types.ts';
+import { Leaderboard } from './views/Leaderboard.tsx';
+import { Voting } from './views/Voting.tsx';
 import { Check, RotateCcw, Loader2 } from 'lucide-react';
-import * as db from './services/db';
+import * as db from './services/db.ts';
 
 const App: React.FC = () => {
   const [view, setView] = useState<ViewState>('LEADERBOARD');
