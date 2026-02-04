@@ -95,6 +95,16 @@
             background-size: 200% auto;
             animation: shine 4s linear infinite;
         }
+        
+        /* Prevent selection during drag */
+        .no-select {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
     </style>
 <link rel="stylesheet" href="/index.css">
 </head>
@@ -108,7 +118,7 @@
             Crown, Star, GripVertical, CheckCircle2, ArrowRight, Trophy, Sparkles, Activity, RotateCcw
         } from 'lucide-react';
         import {
-            DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors
+            DndContext, closestCenter, KeyboardSensor, MouseSensor, TouchSensor, useSensor, useSensors
         } from '@dnd-kit/core';
         import {
             arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable
@@ -147,7 +157,7 @@
                 const current = await api.getMembers();
                 const map = new Map(current.map(m => [m.id, m]));
                 
-                // Scoring: 1st=100pts, 2nd=80pts, 3rd=60pts, 4th=40pts, 5th=20pts
+                // Scoring
                 rankedItems.forEach((item, index) => {
                     const member = map.get(item.id);
                     if (member) {
@@ -179,7 +189,7 @@
 
         const Podium = ({ members }) => {
             const sorted = [...members].sort((a, b) => b.score - a.score);
-            const top3 = [sorted[1], sorted[0], sorted[2]].filter(Boolean); // 2nd, 1st, 3rd
+            const top3 = [sorted[1], sorted[0], sorted[2]].filter(Boolean);
 
             return (
                 <div className="flex items-end justify-center gap-2 md:gap-6 mb-12 mt-8 px-4">
@@ -230,7 +240,7 @@
                 transition,
                 zIndex: isDragging ? 50 : 'auto',
                 position: 'relative',
-                touchAction: 'none'
+                touchAction: 'none' // Important for touch events on the handle
             };
 
             const rankColor = index === 0 ? 'bg-yellow-500 text-black' : index === 1 ? 'bg-slate-300 text-black' : index === 2 ? 'bg-amber-700 text-white' : 'bg-slate-700 text-slate-300';
@@ -239,29 +249,30 @@
                 <div 
                     ref={setNodeRef} 
                     style={style} 
-                    {...attributes} 
-                    {...listeners}
                     className={`
-                    flex items-center gap-4 p-4 mb-3 rounded-xl border transition-all cursor-grab active:cursor-grabbing
+                    flex items-center gap-4 p-4 mb-3 rounded-xl border transition-all no-select
                     ${isDragging ? 'bg-indigo-600 border-indigo-400 shadow-2xl scale-105' : 'glass-panel border-slate-700/50 hover:border-slate-600'}
                 `}>
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm shadow-lg ${rankColor}`}>
                         {index + 1}
                     </div>
                     
-                    <div className="flex-1 select-none">
+                    <div className="flex-1 select-none pointer-events-none">
                         <div className="font-bold text-white text-lg">{member.name}</div>
                         <div className="text-xs text-slate-400">{member.title}</div>
                     </div>
                     
-                    <div className="p-2 text-slate-500 hover:text-white">
-                        <GripVertical className="w-6 h-6" />
+                    {/* Explicit Drag Handle */}
+                    <div 
+                        {...attributes} 
+                        {...listeners} 
+                        className="p-4 -m-4 cursor-grab active:cursor-grabbing text-slate-500 hover:text-white flex items-center justify-center touch-none"
+                    >
+                        <GripVertical className="w-8 h-8" />
                     </div>
                 </div>
             );
         };
-
-        // --- Screens ---
 
         const LeaderboardScreen = ({ members, onVote }) => {
             const sorted = [...members].sort((a, b) => b.score - a.score);
@@ -318,11 +329,22 @@
             const [items, setItems] = useState(members);
             const [submitting, setSubmitting] = useState(false);
             
-            // Replaced multiple sensors with a configured PointerSensor for better mouse/touch compatibility
+            // Replaced sensors with explicit Mouse and Touch sensors
+            // Mouse: Requires 10px movement to start drag
+            // Touch: Requires 250ms delay (Long Press) OR use the handle
+            // Since we use a handle, we will set it to instant for simplicity but keep constraints to avoid accidents
             const sensors = useSensors(
-                useSensor(PointerSensor, {
+                useSensor(MouseSensor, {
                     activationConstraint: {
-                        distance: 5, // Requires 5px movement to start drag, preventing accidental clicks
+                        distance: 5,
+                    },
+                }),
+                useSensor(TouchSensor, {
+                    // Slight delay to distinguish tap vs drag on touch devices, 
+                    // helps with scrolling unless we use a handle with touch-action: none (which we do)
+                    activationConstraint: {
+                        delay: 50,
+                        tolerance: 5,
                     },
                 }),
                 useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -352,7 +374,7 @@
                     <div className="p-4 max-w-lg mx-auto">
                         <div className="bg-indigo-900/20 border border-indigo-500/20 rounded-xl p-4 mb-6 flex items-start gap-3">
                             <Sparkles className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-                            <p className="text-sm text-indigo-200">اسحب الأسماء لترتيبهم. <br/> <span className="text-white font-bold">المركز الأول (1)</span> هو الأفضل.</p>
+                            <p className="text-sm text-indigo-200">اسحب <span className="text-white font-bold">المقبض</span> (III) لترتيب الأسماء.</p>
                         </div>
 
                         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -378,8 +400,6 @@
                 </div>
             );
         };
-
-        // --- Main App ---
 
         const App = () => {
             const [view, setView] = useState('LEADERBOARD');
